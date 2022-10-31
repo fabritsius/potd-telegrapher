@@ -5,5 +5,5 @@ This project gets Wikipedia's Picture of the Day and publishes it on the Telegra
 ### Progress
 
 - [x] Add POTD parser
-- [ ] Add [telegra.ph](https://telegra.ph/) publisher
+- [x] Add [telegra.ph](https://telegra.ph/) publisher
 - [ ] Add Telegram Bot which does the publishing daily
