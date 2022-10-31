@@ -3,6 +3,7 @@ package wikipedia
 import (
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 	"strings"
@@ -29,8 +30,11 @@ func ParsePOTD(date string) (*POTD, error) {
 		return nil, err
 	}
 
-	// Load the HTML document
-	doc, err := goquery.NewDocumentFromReader(res.Body)
+	return fillInPOTD(res.Body)
+}
+
+func fillInPOTD(body io.ReadCloser) (*POTD, error) {
+	doc, err := goquery.NewDocumentFromReader(body)
 	if err != nil {
 		return nil, err
 	}
@@ -45,6 +49,8 @@ func ParsePOTD(date string) (*POTD, error) {
 
 	content.Find("small").Remove()
 	content.Find(".noprint").Remove()
+
+	potd.Content = strings.Trim(strings.ReplaceAll(content.Text(), "\n", ""), " ")
 
 	title, exists := img.Attr("alt")
 	if !exists {
@@ -62,8 +68,6 @@ func ParsePOTD(date string) (*POTD, error) {
 	}
 	imgUrl.Scheme = "https"
 	potd.Img = imgUrl.String()
-
-	potd.Content = strings.Trim(strings.ReplaceAll(content.Text(), "\n", ""), " ")
 
 	return potd, nil
 }
