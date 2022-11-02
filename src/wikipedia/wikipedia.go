@@ -58,10 +58,15 @@ func fillInPOTD(body io.ReadCloser) (*POTD, error) {
 	}
 	potd.Title = title
 
-	imgSrc, exists := img.Attr("src")
-	if !exists {
-		return potd, errors.New("image src not found")
+	imgSrc, err := parseBestQualityImage(img)
+	if err != nil {
+		fmt.Println(err)
+		imgSrc, exists = img.Attr("src")
+		if !exists {
+			return potd, errors.New("image source not found")
+		}
 	}
+
 	imgUrl, err := url.Parse(imgSrc)
 	if err != nil {
 		return potd, err
@@ -70,4 +75,37 @@ func fillInPOTD(body io.ReadCloser) (*POTD, error) {
 	potd.Img = imgUrl.String()
 
 	return potd, nil
+}
+
+func parseBestQualityImage(img *goquery.Selection) (url string, err error) {
+	srcSet, exists := img.Attr("srcset")
+	if !exists {
+		return "", errors.New("srcset attribure wasn't found")
+	}
+
+	bestSize := ""
+	sources := strings.Split(srcSet, ",")
+	for _, src := range sources {
+		srcUrl, srcSize, err := parseSource(src)
+		if err != nil {
+			return "", err
+		}
+
+		if srcSize > bestSize {
+			url = srcUrl
+			bestSize = srcSize
+		}
+	}
+
+	return url, nil
+}
+
+func parseSource(src string) (url, size string, err error) {
+	split := strings.Split(strings.Trim(src, " "), " ")
+	if len(split) != 2 {
+		err = fmt.Errorf("failed to parse %s into 2 parts", src)
+		return
+	}
+
+	return split[0], split[1], nil
 }
