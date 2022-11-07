@@ -6,3 +6,6 @@ wikipedia:
 
 telegraph:
 	go run ./cmd/make-page
+
+bot:
+	go run ./cmd/telegram-bot

@@ -13,33 +13,42 @@ import (
 	"github.com/fabritsius/potd-telegrapher/src/wikipedia"
 )
 
-func MakeArticle(date string) (string, error) {
+func MakeArticle(date string) (*Result, error) {
 	telegraph, err := NewTelegraphClient()
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	wikiPage, err := wikipedia.ParsePOTD(date)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	page, err := fillPage(wikiPage)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	resp, err := telegraph.createPage(page)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
-	return string(body), nil
+	reply := &ReplyBody{}
+	if err := json.Unmarshal(body, reply); err != nil {
+		return nil, err
+	}
+
+	if !reply.Ok {
+		return nil, errors.New("failed to create an article")
+	}
+
+	return &reply.Result, nil
 }
 
 func fillPage(wikiPage *wikipedia.POTD) (TelegraphPage, error) {
@@ -165,4 +174,14 @@ func NewTelegraphClient() (*TelegraphClient, error) {
 
 func getTelegraphToken() (string, bool) {
 	return os.LookupEnv("TELEGRAPH_TOKEN")
+}
+
+type ReplyBody struct {
+	Ok     bool   `json:"ok,omitempty"`
+	Result Result `json:"result,omitempty"`
+}
+
+type Result struct {
+	Path string `json:"path,omitempty"`
+	URL  string `json:"url,omitempty"`
 }
