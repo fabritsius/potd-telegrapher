@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"strings"
 
 	"github.com/fabritsius/potd-telegrapher/src/wikipedia"
 )
@@ -51,8 +52,15 @@ func MakeArticle(date string) (*Result, error) {
 }
 
 func fillPage(wikiPage *wikipedia.POTD) (TelegraphPage, error) {
+	authorName, authorURL, err := getAuthor()
+	if err != nil {
+		fmt.Println("failed to parse the author")
+	}
+
 	page := TelegraphPage{
-		Title: wikiPage.Title,
+		Title:      wikiPage.Title,
+		AuthorName: authorName,
+		AuthorURL:  authorURL,
 	}
 
 	page.AddImg(wikiPage.Img)
@@ -134,6 +142,7 @@ func (t *TelegraphClient) createPage(page TelegraphPage) (*http.Response, error)
 	values := requestURL.Query()
 	values.Add("title", page.Title)
 	values.Add("author_name", page.AuthorName)
+	values.Add("author_url", page.AuthorURL)
 	values.Add("content", page.StringContent())
 
 	fmt.Println(page.StringContent())
@@ -184,4 +193,21 @@ type ReplyBody struct {
 type Result struct {
 	Path string `json:"path,omitempty"`
 	URL  string `json:"url,omitempty"`
+}
+
+func getAuthor() (name, url string, err error) {
+	authorStr, found := os.LookupEnv("TELEGRAPH_AUTHOR")
+	if !found {
+		err = errors.New("failed to find TELEGRAPH_AUTHOR variable")
+		return
+	}
+
+	authorData := strings.Split(authorStr, ",")
+	if len(authorData) != 2 {
+		err = errors.New("author string should be formated like author,authorUrl")
+		return
+	}
+
+	name, url = authorData[0], authorData[1]
+	return
 }
