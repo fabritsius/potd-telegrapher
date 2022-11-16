@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/fabritsius/potd-telegrapher/src/telegraph"
@@ -34,11 +36,11 @@ func RunBot() {
 
 			_, err := bot.Send(msg)
 			if err != nil {
-				fmt.Println(err)
+				log.Printf("error: %v\n", err)
 			}
 		}
 
-		if update.Message.From.UserName != os.Getenv("BOT_ADMIN") {
+		if !userAllowed(update.Message.From) {
 			reply("Your are not in the list of admins, please don't talk to me")
 			continue
 		}
@@ -54,8 +56,63 @@ func RunBot() {
 			continue
 		}
 
-		reply(update.Message.Text)
+		if update.ChatJoinRequest != nil {
+			if !userAllowed(&update.ChatJoinRequest.From) {
+				if _, err = bot.Send(tgbotapi.DeclineChatJoinRequest{
+					ChatConfig: update.FromChat().ChatConfig(),
+					UserID:     update.ChatJoinRequest.From.ID,
+				}); err != nil {
+					log.Printf("error: %v\n", err)
+				}
+			} else {
+				if _, err = bot.Send(tgbotapi.ApproveChatJoinRequestConfig{
+					ChatConfig: update.FromChat().ChatConfig(),
+					UserID:     update.ChatJoinRequest.From.ID,
+				}); err != nil {
+					log.Printf("error: %v\n", err)
+				}
+			}
+
+			continue
+		}
 	}
+}
+
+func PostArticle() {
+	bot, err := tgbotapi.NewBotAPI(os.Getenv("TELEGRAM_APITOKEN"))
+	if err != nil {
+		log.Fatalln(err)
+	}
+
+	channelsString, found := os.LookupEnv("CHANNEL_IDS")
+	if !found {
+		log.Fatalln("CHANNEL_IDS env variable is empty")
+	}
+
+	articleURL, err := makePOTD()
+	if err != nil {
+		log.Printf("error: %v\n", err)
+		return
+	}
+
+	channels := parseChannels(channelsString)
+
+	for _, channel := range channels {
+		chanID, err := strconv.ParseInt(channel, 10, 64)
+		if err != nil {
+			continue
+		}
+
+		msg := tgbotapi.NewMessage(chanID, articleURL)
+		_, err = bot.Send(msg)
+		if err != nil {
+			log.Printf("error: %v", err)
+		}
+	}
+}
+
+func userAllowed(user *tgbotapi.User) bool {
+	return user.UserName == os.Getenv("BOT_ADMIN")
 }
 
 func handleCommands(command string) (string, error) {
@@ -71,8 +128,12 @@ func makePOTD() (string, error) {
 
 	result, err := telegraph.MakeArticle(today)
 	if err != nil {
-		log.Fatal(err)
+		return "", err
 	}
 
 	return result.URL, nil
+}
+
+func parseChannels(channels string) []string {
+	return strings.Split(strings.ReplaceAll(channels, " ", ""), ",")
 }
