@@ -13,38 +13,54 @@ import (
 	"github.com/fabritsius/potd-telegrapher/src/wikipedia"
 )
 
-func MakeArticle(date string) (string, error) {
+func MakeArticle(date string) (*Result, error) {
 	telegraph, err := NewTelegraphClient()
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	wikiPage, err := wikipedia.ParsePOTD(date)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	page, err := fillPage(wikiPage)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	resp, err := telegraph.createPage(page)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
-	return string(body), nil
+	reply := &ReplyBody{}
+	if err := json.Unmarshal(body, reply); err != nil {
+		return nil, err
+	}
+
+	if !reply.Ok {
+		return nil, fmt.Errorf("failed to create an article: %s", reply.Error)
+	}
+
+	return &reply.Result, nil
 }
 
 func fillPage(wikiPage *wikipedia.POTD) (TelegraphPage, error) {
+	authorName, authorURL, err := getAuthor()
+	if err != nil {
+		fmt.Println("failed to parse the author")
+	}
+
 	page := TelegraphPage{
-		Title: wikiPage.Title,
+		Title:      wikiPage.Title,
+		AuthorName: authorName,
+		AuthorURL:  authorURL,
 	}
 
 	page.AddImg(wikiPage.Img)
@@ -90,7 +106,7 @@ func (page TelegraphPage) StringContent() string {
 		return ""
 	}
 
-	return strings.ReplaceAll(string(result), "\\", "")
+	return string(result)
 }
 
 type Node struct {
@@ -126,6 +142,7 @@ func (t *TelegraphClient) createPage(page TelegraphPage) (*http.Response, error)
 	values := requestURL.Query()
 	values.Add("title", page.Title)
 	values.Add("author_name", page.AuthorName)
+	values.Add("author_url", page.AuthorURL)
 	values.Add("content", page.StringContent())
 
 	fmt.Println(page.StringContent())
@@ -165,4 +182,32 @@ func NewTelegraphClient() (*TelegraphClient, error) {
 
 func getTelegraphToken() (string, bool) {
 	return os.LookupEnv("TELEGRAPH_TOKEN")
+}
+
+type ReplyBody struct {
+	Ok     bool   `json:"ok,omitempty"`
+	Result Result `json:"result,omitempty"`
+	Error  string `json:"error,omitempty"`
+}
+
+type Result struct {
+	Path string `json:"path,omitempty"`
+	URL  string `json:"url,omitempty"`
+}
+
+func getAuthor() (name, url string, err error) {
+	authorStr, found := os.LookupEnv("TELEGRAPH_AUTHOR")
+	if !found {
+		err = errors.New("failed to find TELEGRAPH_AUTHOR variable")
+		return
+	}
+
+	authorData := strings.Split(authorStr, ",")
+	if len(authorData) != 2 {
+		err = errors.New("author string should be formated like author,authorUrl")
+		return
+	}
+
+	name, url = authorData[0], authorData[1]
+	return
 }
