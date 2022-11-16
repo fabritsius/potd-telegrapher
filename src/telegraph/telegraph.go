@@ -8,7 +8,6 @@ import (
 	"net/http"
 	"net/url"
 	"os"
-	"strings"
 
 	"github.com/fabritsius/potd-telegrapher/src/wikipedia"
 )
@@ -45,7 +44,7 @@ func MakeArticle(date string) (*Result, error) {
 	}
 
 	if !reply.Ok {
-		return nil, errors.New("failed to create an article")
+		return nil, fmt.Errorf("failed to create an article: %s", reply.Error)
 	}
 
 	return &reply.Result, nil
@@ -99,7 +98,7 @@ func (page TelegraphPage) StringContent() string {
 		return ""
 	}
 
-	return strings.ReplaceAll(string(result), "\\", "")
+	return string(result)
 }
 
 type Node struct {
@@ -179,6 +178,7 @@ func getTelegraphToken() (string, bool) {
 type ReplyBody struct {
 	Ok     bool   `json:"ok,omitempty"`
 	Result Result `json:"result,omitempty"`
+	Error  string `json:"error,omitempty"`
 }
 
 type Result struct {
