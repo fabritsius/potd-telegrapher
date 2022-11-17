@@ -13,7 +13,7 @@ import (
 )
 
 func RunBot() {
-	bot, err := tgbotapi.NewBotAPI(os.Getenv("TELEGRAM_APITOKEN"))
+	bot, err := tgbotapi.NewBotAPI(os.Getenv("TELEGRAM_TOKEN"))
 	if err != nil {
 		panic(err)
 	}
@@ -78,8 +78,13 @@ func RunBot() {
 	}
 }
 
-func PostArticle() {
-	bot, err := tgbotapi.NewBotAPI(os.Getenv("TELEGRAM_APITOKEN"))
+func PostTodayArticle() {
+	today := time.Now().Format("2006-01-02")
+	PostArticle(today)
+}
+
+func PostArticle(date string) {
+	bot, err := tgbotapi.NewBotAPI(os.Getenv("TELEGRAM_TOKEN"))
 	if err != nil {
 		log.Fatalln(err)
 	}
@@ -89,7 +94,7 @@ func PostArticle() {
 		log.Fatalln("CHANNEL_IDS env variable is empty")
 	}
 
-	articleURL, err := makePOTD()
+	articleURL, err := makePOTD(date)
 	if err != nil {
 		log.Printf("error: %v\n", err)
 		return
@@ -117,16 +122,15 @@ func userAllowed(user *tgbotapi.User) bool {
 
 func handleCommands(command string) (string, error) {
 	if command == "potd" {
-		return makePOTD()
+		today := time.Now().Format("2006-01-02")
+		return makePOTD(today)
 	}
 
 	return "", fmt.Errorf("got unsupported command: %s", command)
 }
 
-func makePOTD() (string, error) {
-	today := time.Now().Format("2006-01-02")
-
-	result, err := telegraph.MakeArticle(today)
+func makePOTD(date string) (string, error) {
+	result, err := telegraph.MakeArticle(date)
 	if err != nil {
 		return "", err
 	}
