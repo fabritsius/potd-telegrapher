@@ -1,0 +1,32 @@
+name: Post an Article
+
+on:
+  schedule:
+    - cron: "0 8 * * *"
+  workflow_dispatch:
+    inputs:
+      date:
+        description: "Article date formatted as YYYY-MM-DD"
+        required: false
+
+jobs:
+  cleanup-all:
+    name: Cleanup atlas empty projects, and terminate cluster
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3.1.0
+
+      - name: Set up Go
+        uses: actions/setup-go@v3
+        with:
+          go-version: '1.19'
+
+      - name: Post an Article
+        env:
+          TELEGRAPH_TOKEN: ${{ secrets.TELEGRAPH_TOKEN }}
+          TELEGRAPH_AUTHOR: ${{ secrets.TELEGRAPH_AUTHOR }}
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          BOT_ADMIN: ${{ secrets.BOT_ADMIN }}
+          CHANNEL_IDS: ${{ secrets.CHANNEL_IDS }}
+          ARTICLE_DATE: ${{ secrets.github.event.inputs.date }}
+        run: go run ./cmd/post-to-channel
