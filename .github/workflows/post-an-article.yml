@@ -2,7 +2,7 @@ name: Post an Article
 
 on:
   schedule:
-    - cron: "0 8 * * *"
+    - cron: "0 4 * * *"
   workflow_dispatch:
     inputs:
       date:
@@ -10,8 +10,8 @@ on:
         required: false
 
 jobs:
-  cleanup-all:
-    name: Cleanup atlas empty projects, and terminate cluster
+  post-at-article:
+    name: Post an Article to Telegram Channels
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3.1.0
@@ -28,5 +28,5 @@ jobs:
           TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
           BOT_ADMIN: ${{ secrets.BOT_ADMIN }}
           CHANNEL_IDS: ${{ secrets.CHANNEL_IDS }}
-          ARTICLE_DATE: ${{ secrets.github.event.inputs.date }}
+          ARTICLE_DATE: ${{ inputs.date }}
         run: go run ./cmd/post-to-channel
