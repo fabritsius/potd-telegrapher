@@ -65,7 +65,7 @@ func fillPage(wikiPage *wikipedia.POTD) (TelegraphPage, error) {
 
 	page.AddImg(wikiPage.Img)
 	page.AddText(wikiPage.Content)
-	page.AddText(fmt.Sprintf("Credits: %s", wikiPage.Credits))
+	page.AddItalic(fmt.Sprintf("Credits: %s", wikiPage.Credits))
 
 	return page, nil
 }
@@ -80,6 +80,13 @@ type TelegraphPage struct {
 func (page *TelegraphPage) AddText(text string) {
 	page.addContent(Node{
 		Tag:      "p",
+		Children: []string{text},
+	})
+}
+
+func (page *TelegraphPage) AddItalic(text string) {
+	page.addContent(Node{
+		Tag:      "i",
 		Children: []string{text},
 	})
 }
