@@ -65,7 +65,10 @@ func fillPage(wikiPage *wikipedia.POTD) (TelegraphPage, error) {
 
 	page.AddImg(wikiPage.Img)
 	page.AddText(wikiPage.Content)
-	page.AddItalic(fmt.Sprintf("Credits: %s", wikiPage.Credits))
+
+	if wikiPage.Credits != "" {
+		page.AddItalic(fmt.Sprintf("Credits: %s", wikiPage.Credits))
+	}
 
 	return page, nil
 }
