@@ -109,6 +109,8 @@ func PostArticle(date string) {
 		}
 
 		msg := tgbotapi.NewMessage(chanID, articleURL)
+		msg.DisableNotification = true
+
 		_, err = bot.Send(msg)
 		if err != nil {
 			log.Printf("error: %v", err)
