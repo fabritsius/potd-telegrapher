@@ -12,6 +12,10 @@ import (
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
+const (
+	dateFormat = "2006-01-02"
+)
+
 func RunBot() {
 	bot, err := tgbotapi.NewBotAPI(os.Getenv("TELEGRAM_TOKEN"))
 	if err != nil {
@@ -79,7 +83,7 @@ func RunBot() {
 }
 
 func PostTodayArticle() {
-	today := time.Now().Format("2006-01-02")
+	today := time.Now().Format(dateFormat)
 	PostArticle(today)
 }
 
@@ -108,7 +112,21 @@ func PostArticle(date string) {
 			continue
 		}
 
-		msg := tgbotapi.NewMessage(chanID, articleURL)
+		formattedDate, err := formatDate(date)
+		if err != nil {
+			continue
+		}
+
+		articleMsg := fmt.Sprintf("Daily Picture: %s", formattedDate)
+		msg := tgbotapi.NewMessage(chanID, articleMsg)
+		msg.Entities = append(msg.Entities, tgbotapi.MessageEntity{
+			Type:   "text_link",
+			Offset: 0,
+			Length: len(articleMsg),
+			URL:    articleURL,
+		})
+		msg.DisableNotification = true
+
 		_, err = bot.Send(msg)
 		if err != nil {
 			log.Printf("error: %v", err)
@@ -140,4 +158,13 @@ func makePOTD(date string) (string, error) {
 
 func parseChannels(channels string) []string {
 	return strings.Split(strings.ReplaceAll(channels, " ", ""), ",")
+}
+
+func formatDate(date string) (string, error) {
+	d, err := time.Parse(dateFormat, date)
+	if err != nil {
+		return "", err
+	}
+
+	return d.Format("January _2, 2006"), nil
 }
