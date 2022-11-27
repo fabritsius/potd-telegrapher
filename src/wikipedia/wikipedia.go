@@ -45,7 +45,11 @@ func fillInPOTD(body io.ReadCloser) (*POTD, error) {
 	img := contentBox.Find("a.image img")
 	content := contentBox.Find(".mw-parser-output div:nth-child(2) div:nth-child(3)")
 
-	potd.Credits = content.Find("small a").Text()
+	creditNames := []string{}
+	content.Find("small a").Each(func(idx int, credit *goquery.Selection) {
+		creditNames = append(creditNames, credit.Text())
+	})
+	potd.Credits = strings.Join(creditNames, ", ")
 
 	content.Find("small").Remove()
 	content.Find(".noprint").Remove()
