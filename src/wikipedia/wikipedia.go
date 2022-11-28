@@ -53,6 +53,7 @@ func fillInPOTD(body io.ReadCloser) (*POTD, error) {
 
 	content.Find("small").Remove()
 	content.Find(".noprint").Remove()
+	content.Find(".gallery").Remove()
 
 	potd.Content = strings.Trim(strings.ReplaceAll(content.Text(), "\n", ""), " ")
 
